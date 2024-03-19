@@ -22,6 +22,8 @@ public class Application {
                 BufferedReader bufferedReader = new BufferedReader( new InputStreamReader( socket.getInputStream() ) );
                 System.out.println( bufferedReader.readLine() );
             }
+            int g=0;
+
 
         }
 
