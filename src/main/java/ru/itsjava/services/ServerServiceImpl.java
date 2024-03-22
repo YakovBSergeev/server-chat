@@ -1,15 +1,20 @@
 package ru.itsjava.services;
 
+import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
+import ru.itsjava.domain.User;
 
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 
+@AllArgsConstructor
 public class ServerServiceImpl implements ServerService {
-    public final static int PORT = 8081;
-    public final List<Observer> observers = new ArrayList<>();
+    private final static int PORT = 8081;
+    private final List<Observer> observers = new ArrayList<>();
+
+
 
     @SneakyThrows
     @Override
@@ -21,7 +26,7 @@ public class ServerServiceImpl implements ServerService {
             Socket socket = serverSocket.accept();
 
             if (socket != null) {
-                Thread thread = new Thread( new ClientRunnable( socket, this ) );
+                Thread thread = new Thread( new ClientRunnable( socket, this,  );
                 thread.start();
 
 
