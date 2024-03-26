@@ -1,6 +1,6 @@
 package ru.itsjava.services;
 
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import ru.itsjava.domain.User;
 
@@ -9,7 +9,7 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class ClientRunnable implements Runnable, Observer {
     private final Socket socket;
     private final ServerService serverService;
@@ -28,7 +28,8 @@ public class ClientRunnable implements Runnable, Observer {
 
             while ((messageFromClient = bufferedReader.readLine()) != null) {
                 System.out.println( user.getName() + ":" + messageFromClient );
-                serverService.notifyObserver( user.getName() + ":" + messageFromClient );
+//                serverService.notifyObserver( user.getName() + ":" + messageFromClient );
+                serverService.notifyObserverExceptMe( user.getName() + ":" + messageFromClient, this );
             }
         }
 
@@ -55,5 +56,6 @@ public class ClientRunnable implements Runnable, Observer {
         PrintWriter clientWrite = new PrintWriter( socket.getOutputStream() );
         clientWrite.println( message );
         clientWrite.flush();
+
     }
 }
