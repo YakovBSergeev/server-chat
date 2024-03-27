@@ -2,6 +2,7 @@ package ru.itsjava.services;
 
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
+import ru.itsjava.dao.UserDao;
 import ru.itsjava.domain.User;
 
 import java.io.BufferedReader;
@@ -14,7 +15,7 @@ public class ClientRunnable implements Runnable, Observer {
     private final Socket socket;
     private final ServerService serverService;
     private User user;
-
+    private final UserDao userDao;
 
     @SneakyThrows
     @Override
@@ -43,7 +44,7 @@ public class ClientRunnable implements Runnable, Observer {
             if (authorizationMessage.startsWith( "!autho!" )) {
                 String login = authorizationMessage.substring( 7 ).split( ":" )[0];
                 String password = authorizationMessage.substring( 7 ).split( ":" )[1];
-                user = new User( login, password );
+                user = userDao.findByNameAndPassword( login, password );
                 return true;
             }
         }
