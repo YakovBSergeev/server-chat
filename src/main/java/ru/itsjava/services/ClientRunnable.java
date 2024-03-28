@@ -24,7 +24,7 @@ public class ClientRunnable implements Runnable, Observer {
 
         BufferedReader bufferedReader = new BufferedReader( new InputStreamReader( socket.getInputStream() ) );
         String messageFromClient;
-        if (authorization( bufferedReader )) {
+        if (authorizationRegistration( bufferedReader )) {
             serverService.addObserver( this );
 
             while ((messageFromClient = bufferedReader.readLine()) != null) {
@@ -37,14 +37,19 @@ public class ClientRunnable implements Runnable, Observer {
     }
 
     @SneakyThrows
-    private boolean authorization(BufferedReader bufferedReader) {
+    private boolean authorizationRegistration(BufferedReader bufferedReader) {
         String authorizationMessage;
         while ((authorizationMessage = bufferedReader.readLine()) != null) {
 //            !autho!login:password
-            if (authorizationMessage.startsWith( "!autho!" )) {
-                String login = authorizationMessage.substring( 7 ).split( ":" )[0];
-                String password = authorizationMessage.substring( 7 ).split( ":" )[1];
+            if (authorizationMessage.startsWith( "1!autho!" )) {
+                String login = authorizationMessage.substring( 8 ).split( ":" )[0];
+                String password = authorizationMessage.substring( 8 ).split( ":" )[1];
                 user = userDao.findByNameAndPassword( login, password );
+                return true;
+            } else if(authorizationMessage.startsWith( "2!autho!" )) {
+                String login = authorizationMessage.substring( 8 ).split( ":" )[0];
+                String password = authorizationMessage.substring( 8 ).split( ":" )[1];
+                user = userDao.addUser( login, password );
                 return true;
             }
         }

@@ -28,7 +28,7 @@ public class ServerServiceImpl implements ServerService {
             Socket socket = serverSocket.accept();
 
             if (socket != null) {
-                Thread thread = new Thread( new ClientRunnable( socket, this , userDao ));
+                Thread thread = new Thread( new ClientRunnable( socket, this, userDao ) );
                 thread.start();
 
             }
@@ -69,6 +69,15 @@ public class ServerServiceImpl implements ServerService {
             }
         }
 
+    }
+
+
+    public void notifyObserverOnlyMe(String message, Observer observer) {
+        for (Observer key : observers) {
+            if (observer.equals( key )) {
+                key.notifyMe( message );
+            }
+        }
     }
 }
 

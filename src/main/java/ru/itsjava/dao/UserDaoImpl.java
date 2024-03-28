@@ -1,6 +1,7 @@
 package ru.itsjava.dao;
 
 import lombok.AllArgsConstructor;
+import ru.itsjava.Exception.UserFoundException;
 import ru.itsjava.Exception.UserNotFoundException;
 import ru.itsjava.domain.User;
 import ru.itsjava.utils.Props;
@@ -65,7 +66,7 @@ public class UserDaoImpl implements UserDao {
         } catch (SQLException throwables) {
             throwables.printStackTrace();
         }
-        throw new UserNotFoundException( "This user is registration already!!!" );
+        throw new UserFoundException( "This user is registration already!!!" );
     }
 
 }
