@@ -33,7 +33,6 @@ public class ClientRunnable implements Runnable, Observer {
                 serverService.notifyObserverExceptMe( user.getName() + ":" + messageFromClient, this );
             }
         }
-
     }
 
     @SneakyThrows
@@ -45,6 +44,13 @@ public class ClientRunnable implements Runnable, Observer {
                 String login = authorizationMessage.substring( 8 ).split( ":" )[0];
                 String password = authorizationMessage.substring( 8 ).split( ":" )[1];
                 user = userDao.findByNameAndPassword( login, password );
+                if (user.getName().equals( "1" )) {
+                    serverService.addObserver( this );
+                    ServerServiceImpl service = new ServerServiceImpl();
+                    service.notifyObserverOnlyMe( "Такой пользователь не зарегистрирован.", this );
+                    serverService.deleteObserver( this );
+                    return false;
+                }
                 return true;
             } else if(authorizationMessage.startsWith( "2!autho!" )) {
                 String login = authorizationMessage.substring( 8 ).split( ":" )[0];
