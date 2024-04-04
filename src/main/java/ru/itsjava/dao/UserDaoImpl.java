@@ -1,8 +1,8 @@
 package ru.itsjava.dao;
 
 import lombok.AllArgsConstructor;
-import ru.itsjava.Exception.UserRegistrationException;
 import ru.itsjava.Exception.UserNotFoundException;
+import ru.itsjava.Exception.UserRegistrationException;
 import ru.itsjava.domain.User;
 import ru.itsjava.utils.Props;
 
@@ -14,7 +14,7 @@ public class UserDaoImpl implements UserDao {
 
 
     @Override
-    public User findByNameAndPassword(String name, String password) throws UserNotFoundException {
+    public User findByNameAndPassword(String name, String password) {
         try (Connection connection = DriverManager.getConnection(
                 props.getValue( "db.url" ),
                 props.getValue( "db.login" ),
@@ -37,8 +37,9 @@ public class UserDaoImpl implements UserDao {
         } catch (SQLException throwables) {
             throwables.printStackTrace();
         }
-        return new User( "1", "1" );
-//        throw new UserNotFoundException( "User not found!!!" );
+//        return new User( null, null );
+
+        throw new UserNotFoundException( "User not found!!!" );
     }
 
     @Override

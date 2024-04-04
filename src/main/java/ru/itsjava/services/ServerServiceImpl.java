@@ -76,8 +76,13 @@ public class ServerServiceImpl implements ServerService {
         for (Observer key : observers) {
             if (observer.equals( key )) {
                 key.notifyMe( message );
+
             }
         }
+    }
+
+    public void printObserver(){
+        System.out.println( observers.toString() );
     }
 }
 
