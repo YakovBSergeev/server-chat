@@ -1,7 +1,9 @@
 package ru.itsjava.services;
 
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
+import ru.itsjava.dao.MessageDao;
+import ru.itsjava.dao.MessageDaoImpl;
 import ru.itsjava.dao.UserDao;
 import ru.itsjava.dao.UserDaoImpl;
 import ru.itsjava.utils.Props;
@@ -11,11 +13,13 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 
-@AllArgsConstructor
+
+@RequiredArgsConstructor
 public class ServerServiceImpl implements ServerService {
     private final static int PORT = 8081;
     private final List<Observer> observers = new ArrayList<>();
     private final UserDao userDao = new UserDaoImpl( new Props() );
+    private final MessageDao messageDao = new MessageDaoImpl( new Props() );
 
     @SneakyThrows
     @Override
@@ -28,9 +32,8 @@ public class ServerServiceImpl implements ServerService {
             Socket socket = serverSocket.accept();
 
             if (socket != null) {
-                Thread thread = new Thread( new ClientRunnable( socket, this, userDao ) );
+                Thread thread = new Thread( new ClientRunnable( socket, this, userDao, messageDao ) );
                 thread.start();
-
             }
         }
     }
@@ -48,7 +51,6 @@ public class ServerServiceImpl implements ServerService {
 
     @Override
     public void notifyObserver(String message) {
-
         for (Observer observer : observers) {
             observer.notifyMe( message );
         }
@@ -62,27 +64,34 @@ public class ServerServiceImpl implements ServerService {
 //                System.out.println( observers.get( i ).hashCode() );
 //            }
 //                }
-
         for (Observer key : observers) {
-            if (!observer.equals( key )) {
+            if (!observer.equals( key ) && !message.split( ":" )[1].equals( "Exit" )) {
                 key.notifyMe( message );
+            } else if (!observer.equals( key ) && message.split( ":" )[1].equals( "Exit" )) {
+                key.notifyMe( message.split( ":" )[0] + " вышел из чата." );
             }
         }
-
     }
 
-
+    @Override
     public void notifyObserverOnlyMe(String message, Observer observer) {
         for (Observer key : observers) {
             if (observer.equals( key )) {
                 key.notifyMe( message );
-
             }
         }
     }
 
-    public void printObserver(){
-        System.out.println( observers.toString() );
+    @Override
+    public void notifyArchiveMessage(Observer observer) {
+        for (Observer key : observers) {
+            if (observer.equals( key )) {
+                for (int i = 0; i < messageDao.printLastMessages().size(); i++) {
+                    String message = messageDao.printLastMessages().get( i ).getFrom() + ":" + messageDao.printLastMessages().get( i ).getTo_text();
+                    key.notifyMe( message );
+                }
+            }
+        }
     }
 }
 

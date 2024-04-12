@@ -1,6 +1,7 @@
 package ru.itsjava.dao;
 
 import lombok.AllArgsConstructor;
+import org.apache.log4j.Logger;
 import ru.itsjava.Exception.UserNotFoundException;
 import ru.itsjava.Exception.UserRegistrationException;
 import ru.itsjava.domain.User;
@@ -10,7 +11,9 @@ import java.sql.*;
 
 @AllArgsConstructor
 public class UserDaoImpl implements UserDao {
+
     private final Props props;
+    private static final Logger log = Logger.getLogger( UserDaoImpl.class );
 
 
     @Override
@@ -29,6 +32,7 @@ public class UserDaoImpl implements UserDao {
             resultSet.next();
 
             int userCount = resultSet.getInt( "cnt" );
+            log.info( userCount );
 
             if (userCount == 1) {
                 return new User( name, password );
@@ -37,8 +41,6 @@ public class UserDaoImpl implements UserDao {
         } catch (SQLException throwables) {
             throwables.printStackTrace();
         }
-//        return new User( null, null );
-
         throw new UserNotFoundException( "User not found!!!" );
     }
 
@@ -55,6 +57,7 @@ public class UserDaoImpl implements UserDao {
 
             ResultSet resultSet = prepared.executeQuery();
             resultSet.next();
+
             int userCount = resultSet.getInt( "cnt" );
             if (userCount != 1) {
                 PreparedStatement preparedStatement = connection
