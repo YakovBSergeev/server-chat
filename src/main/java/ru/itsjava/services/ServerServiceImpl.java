@@ -6,18 +6,23 @@ import ru.itsjava.dao.MessageDao;
 import ru.itsjava.dao.MessageDaoImpl;
 import ru.itsjava.dao.UserDao;
 import ru.itsjava.dao.UserDaoImpl;
+import ru.itsjava.domain.User;
 import ru.itsjava.utils.Props;
 
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 
 @RequiredArgsConstructor
 public class ServerServiceImpl implements ServerService {
     private final static int PORT = 8081;
     private final List<Observer> observers = new ArrayList<>();
+    private final Map<String, Observer> userObserver = new HashMap<>();
+
     private final UserDao userDao = new UserDaoImpl( new Props() );
     private final MessageDao messageDao = new MessageDaoImpl( new Props() );
 
@@ -69,9 +74,11 @@ public class ServerServiceImpl implements ServerService {
                 key.notifyMe( message );
             } else if (!observer.equals( key ) && message.split( ":" )[1].equals( "Exit" )) {
                 key.notifyMe( message.split( ":" )[0] + " вышел из чата." );
+                deleteObserver( key );
             }
         }
     }
+
 
     @Override
     public void notifyObserverOnlyMe(String message, Observer observer) {
@@ -81,6 +88,31 @@ public class ServerServiceImpl implements ServerService {
             }
         }
     }
+
+    @Override
+    public void putObserver(User user, Observer observer) {
+        userObserver.put( user.getName(), observer );
+    }
+
+    @Override
+    public void notifyPrivate(String user, String message) {
+        for (Map.Entry<String, Observer> key : userObserver.entrySet()
+        ) {
+            if (key.getKey().equals( user )) {
+                System.out.println( key.getValue() );
+                key.getValue().notifyMe( message.split( ":" )[1] );
+            }
+        }
+    }
+
+    @Override
+    public void printMap() {
+        for (Map.Entry<String, Observer> key : userObserver.entrySet()
+        ) {
+            System.out.println( key.getKey() + ":" + key.getValue() );
+        }
+    }
+
 
     @Override
     public void notifyArchiveMessage(Observer observer) {

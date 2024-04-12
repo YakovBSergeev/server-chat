@@ -27,6 +27,14 @@ public class ClientRunnable implements Runnable, Observer {
     private final MessageDao messageDao;
     private static final Logger log = Logger.getLogger( ClientRunnable.class );
 
+    /**
+     * Этот метод работает в потоке.
+     * После прохождения авторизации/регистрации пользователя добавляем в коллекцию List<Observer>.
+     * Выводим в консоль сообщение  "Client connected", отправляем это сообщение пользователю и
+     * выводим пользователю последние десять сообщении чата из БД.
+     * Обрабатываем последующие сообщения от пользователя: выводим сообщение в консоль, сохраняем в файл (МЕТОД НЕ РАБОТАЕТ),
+     * рассылаем собщение всем подключеннвм пользователям кроме автора, сохраняем сообщение в БД.
+     */
     @SneakyThrows
     @Override
     public void run() {
@@ -35,20 +43,37 @@ public class ClientRunnable implements Runnable, Observer {
         String messageFromClient;
         if (authorizationRegistration( bufferedReader )) {
             serverService.addObserver( this );
+            serverService.putObserver( user, this );
             log.info( serverService );
             System.out.println( "Client connected" );
             serverService.notifyObserverOnlyMe( "Client connected.", this );
             serverService.notifyArchiveMessage( this );
+            serverService.printMap();
             while ((messageFromClient = bufferedReader.readLine()) != null) {
                 System.out.println( user.getName() + ":" + messageFromClient );
-                saveMessage( messageFromClient );
-//                serverService.notifyObserver( user.getName() + ":" + messageFromClient );
-                serverService.notifyObserverExceptMe( user.getName() + ":" + messageFromClient, this );
-                messageDao.saveMessage( user.getName(), messageFromClient );
+                if (userDao.nameIs( messageFromClient.split( ":" )[0] )) {
+                    serverService.notifyPrivate( messageFromClient.split( ":" )[0], messageFromClient.split( ":" )[1] );
+                    messageDao.saveMessage( user.getName(), user.getName() + ":" + messageFromClient );
+                } else {
+                    saveMessage( messageFromClient );
+                    serverService.notifyObserverExceptMe( user.getName() + ":" + messageFromClient, this );
+                    messageDao.saveMessage( user.getName(), messageFromClient );
+                }
             }
         }
     }
 
+
+    /**
+     * Медот проверяет авторизацию пользователя или регистрирует нового пользователя в БД.
+     * Авторизируем пользователя (true) или ловим ошибку UserNotFoundException и отправляем пользователю сообщение
+     * "Такой пользователь не зарегистрирован. Авторизуйтесь повторно."
+     * Регистриуем пользователя (true) или ловим ошибку UserRegistrationException и отправляем пользователю сообщение
+     * "Такой пользователь уже зарегистрирован. Измените данные регистрации."
+     *
+     * @param bufferedReader входящий поток с данными о поьлзователе.
+     * @return true/false
+     */
     @SneakyThrows
     private boolean authorizationRegistration(BufferedReader bufferedReader) {
         String authorizationMessage;
@@ -80,6 +105,12 @@ public class ClientRunnable implements Runnable, Observer {
         return false;
     }
 
+    /**
+     * Рассылает сообщения с сервера.
+     *
+     * @param message
+     */
+
     @SneakyThrows
     @Override
     public void notifyMe(String message) {
@@ -87,6 +118,12 @@ public class ClientRunnable implements Runnable, Observer {
         clientWrite.println( message );
         clientWrite.flush();
     }
+
+    /**
+     * Отправляет сообщение пользователю, если авторизация/регистрация не пройдена.
+     *
+     * @param message
+     */
 
     private void sendToClient(String message) {
         ServerServiceImpl service = new ServerServiceImpl();
@@ -96,6 +133,12 @@ public class ClientRunnable implements Runnable, Observer {
         log.info( service );
     }
 
+    /**
+     * Сохраняет сообщение в файл.
+     *
+     * @param messageFromClient
+     */
+
     @SneakyThrows
     private void saveMessage(String messageFromClient) {
         PrintWriter printWriter = new PrintWriter( "src/main/resources/arсhiveMessage.txt" );
@@ -103,5 +146,6 @@ public class ClientRunnable implements Runnable, Observer {
         Date date = new Date();
         printWriter.println( dateFormat.format( date ) + ":" + user.getName() + ":" + messageFromClient );
     }
+
 }
 

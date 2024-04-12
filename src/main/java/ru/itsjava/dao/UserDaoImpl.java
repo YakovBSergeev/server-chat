@@ -15,6 +15,14 @@ public class UserDaoImpl implements UserDao {
     private final Props props;
     private static final Logger log = Logger.getLogger( UserDaoImpl.class );
 
+    /**
+     * Метод ищет пользователя в БД.
+     *
+     * @param name     имя пользователя
+     * @param password пароль пользователя
+     * @return возвращает new User( name, password ) или
+     * throw new UserNotFoundException( "User not found!!!" )
+     */
 
     @Override
     public User findByNameAndPassword(String name, String password) {
@@ -43,6 +51,16 @@ public class UserDaoImpl implements UserDao {
         }
         throw new UserNotFoundException( "User not found!!!" );
     }
+
+    /**
+     * Метод проверяет есть ли пользователь в БД
+     * и добавляет нового пользователя в БД.     *
+     *
+     * @param name     имя пользователя
+     * @param password пароль пользователя
+     * @return возвращает new User( name, password ) или
+     * throw new UserRegistrationException( "This user is registration already!!!" )
+     */
 
     @Override
     public User addUser(String name, String password) {
@@ -75,5 +93,34 @@ public class UserDaoImpl implements UserDao {
         throw new UserRegistrationException( "This user is registration already!!!" );
     }
 
+    @Override
+    public boolean nameIs(String name) {
+        try (Connection connection = DriverManager.getConnection(
+                props.getValue( "db.url" ),
+                props.getValue( "db.login" ),
+                props.getValue( "db.password" ) );) {
+
+            PreparedStatement preparedStatement = connection
+                    .prepareStatement( "select count(*) cnt from hw412_schema.users where name = ?;" );
+            preparedStatement.setString( 1, name );
+
+            ResultSet resultSet = preparedStatement.executeQuery();
+            resultSet.next();
+
+            int userCount = resultSet.getInt( "cnt" );
+            log.info( userCount );
+
+            if (userCount == 1) {
+                return true;
+            }
+
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+        }
+        return false;
+    }
+
 }
+
+
 

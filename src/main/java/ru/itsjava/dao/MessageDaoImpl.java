@@ -16,6 +16,16 @@ public class MessageDaoImpl implements MessageDao {
 
     private final Props props;
 
+    /**
+     * Медот сохраняет сообщение в БД от зарегистрированного пользователя
+     * По имени пользователя выбираем его id  из БД hw412_schema.users.
+     * Дбавляем в БД hw412_schema.messages с параметрами (тект сообщения, id)
+     *
+     * @param from    имя пользователя
+     * @param to_text текст сообщения
+     * @return возвращаем сообщение (имя, текст сообщения)
+     * Если текст равен Exit, пробрасываем ошибку "User Exit!!!".
+     */
     @Override
     public Message saveMessage(String from, String to_text) {
         try (Connection connection = DriverManager.getConnection(
@@ -48,6 +58,13 @@ public class MessageDaoImpl implements MessageDao {
         throw new UserNotFoundException( "User not found!!!" );
     }
 
+    /**
+     * Метод возвращает коллекцию List<Message> состоящую из последних 10 сообщений БД hw412_schema.messages
+     * вида имя/текст сообщения
+     *
+     * @return ArrayList ( nameFromId.getString( "name" ), idAndMessage.getString( "message" ) );
+     */
+
     @Override
     public List<Message> printLastMessages() {
         try (Connection connection = DriverManager.getConnection(
@@ -57,25 +74,24 @@ public class MessageDaoImpl implements MessageDao {
             PreparedStatement preparedStatement = connection
                     .prepareStatement( "select count(*) cnt from hw412_schema.messages;" );
 
-            ResultSet resultSet = preparedStatement.executeQuery();
-            resultSet.next();
+            ResultSet countMessage = preparedStatement.executeQuery();
+            countMessage.next();
 
-            int countMessages = resultSet.getInt( "cnt" ) - 10;
-            String id = Integer.toString( countMessages );
+            int countMessages = countMessage.getInt( "cnt" ) - 10;
 
             PreparedStatement preparedStatementMessage = connection
                     .prepareStatement( "SELECT user_id, message FROM hw412_schema.messages ORDER BY id LIMIT 10 offset ?" );
             preparedStatementMessage.setInt( 1, countMessages );
-            ResultSet resultSet01 = preparedStatementMessage.executeQuery();
+            ResultSet idAndMessage = preparedStatementMessage.executeQuery();
 
             List<Message> userMessage = new ArrayList<>();
-            while (resultSet01.next()) {
+            while (idAndMessage.next()) {
                 PreparedStatement preparedStatementUser = connection.prepareStatement( "select name from hw412_schema.users where id = ?" );
-                String userId = Integer.toString( resultSet01.getInt( "user_id" ) );
+                String userId = Integer.toString( idAndMessage.getInt( "user_id" ) );
                 preparedStatementUser.setString( 1, userId );
-                ResultSet resultSet02 = preparedStatementUser.executeQuery();
-                resultSet02.next();
-                Message message = new Message( resultSet02.getString( "name" ), resultSet01.getString( "message" ) );
+                ResultSet nameFromId = preparedStatementUser.executeQuery();
+                nameFromId.next();
+                Message message = new Message( nameFromId.getString( "name" ), idAndMessage.getString( "message" ) );
                 userMessage.add( message );
             }
             return userMessage;
