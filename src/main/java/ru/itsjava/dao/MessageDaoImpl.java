@@ -41,7 +41,7 @@ public class MessageDaoImpl implements MessageDao {
 
             String userId = resultSet.getString( "cnt" );
 
-            if (!to_text.equals( "Exit" )) {
+            if (!to_text.equals( "Exit" ) ) {
                 PreparedStatement preparedStatement01 = connection
                         .prepareStatement( "insert into hw412_schema.messages(message, user_id) value (?, ?);" );
                 preparedStatement01.setString( 1, to_text );

@@ -93,6 +93,12 @@ public class UserDaoImpl implements UserDao {
         throw new UserRegistrationException( "This user is registration already!!!" );
     }
 
+    /**
+     * Проверяем, есть ли пользователь в базе.
+     * @param name
+     * @return возвращаем true, если пользователь зарегистрирован.
+     */
+
     @Override
     public boolean nameIs(String name) {
         try (Connection connection = DriverManager.getConnection(

@@ -26,12 +26,16 @@ public class ServerServiceImpl implements ServerService {
     private final UserDao userDao = new UserDaoImpl( new Props() );
     private final MessageDao messageDao = new MessageDaoImpl( new Props() );
 
+
+    /**
+     * Запускаем сервер.
+     */
+
     @SneakyThrows
     @Override
     public void start() {
         ServerSocket serverSocket = new ServerSocket( PORT );
         System.out.println( "= SERVER STARTS =" );
-
 
         while (true) {
             Socket socket = serverSocket.accept();
@@ -43,16 +47,32 @@ public class ServerServiceImpl implements ServerService {
         }
     }
 
-
+    /**
+     * Добавляем пользователя в коллекцию Лист
+     *
+     * @param observer
+     */
     @Override
     public void addObserver(Observer observer) {
         observers.add( observer );
     }
 
+    /**
+     * Удаляем пользователя из коллекции
+     *
+     * @param observer
+     */
+
     @Override
     public void deleteObserver(Observer observer) {
         observers.remove( observer );
     }
+
+    /**
+     * Рассылаем сообщение пользователям из коллекции Лист
+     *
+     * @param message
+     */
 
     @Override
     public void notifyObserver(String message) {
@@ -61,25 +81,32 @@ public class ServerServiceImpl implements ServerService {
         }
     }
 
+    /**
+     * Отправка сообщения всем кроме сябя
+     *
+     * @param message
+     * @param observer
+     */
+
     @Override
     public void notifyObserverExceptMe(String message, Observer observer) {
-//        for (int i = 0; i < observers.size(); i++) {
-//            if (!observer.equals( observers.get( i ) )) {
-//                observers.get( i ).notifyMe( message );
-//                System.out.println( observers.get( i ).hashCode() );
-//            }
-//                }
         for (Observer key : observers) {
-            if (!observer.equals( key ) && !message.split( ":" )[1].equals( "Exit" )) {
+            if (!observer.equals( key )) {
                 key.notifyMe( message );
-            } else if (!observer.equals( key ) && message.split( ":" )[1].equals( "Exit" )) {
-                key.notifyMe( message.split( ":" )[0] + " вышел из чата." );
-                deleteObserver( key );
             }
         }
+//        for (int i = 0; i < observers.size(); i++) {
+//            if (!observer.equals( observers.get( i ) )) {
+//                observers.get( i ).notifyMe( message );//
+//            }
     }
 
-
+    /**
+     * Отправка сообщение только себе
+     *
+     * @param message
+     * @param observer
+     */
     @Override
     public void notifyObserverOnlyMe(String message, Observer observer) {
         for (Observer key : observers) {
@@ -89,22 +116,46 @@ public class ServerServiceImpl implements ServerService {
         }
     }
 
+    /**
+     * Добавление пользователя в коллекцию МАП (имя пользователя, пользователь)
+     *
+     * @param user
+     * @param observer
+     */
     @Override
-    public void putObserver(User user, Observer observer) {
-        userObserver.put( user.getName(), observer );
+    public void putObserver(String user, Observer observer) {
+        userObserver.put( user, observer );
     }
 
+    /**
+     * Удаление пользователя из коллекции МАП (имя пользователя, пользователь)
+     *
+     * @param user
+     * @param observer
+     */
+    @Override
+    public void clearObserver(String user, Observer observer) {
+        userObserver.remove( user, observer );
+    }
+
+    /**
+     * Отправка приватного сообщения
+     *
+     * @param user
+     * @param message
+     */
     @Override
     public void notifyPrivate(String user, String message) {
         for (Map.Entry<String, Observer> key : userObserver.entrySet()
-        ) {
+        )
             if (key.getKey().equals( user )) {
-                System.out.println( key.getValue() );
-                key.getValue().notifyMe( message.split( ":" )[1] );
+                key.getValue().notifyMe( message );
             }
-        }
     }
 
+    /**
+     * Печать МАПы
+     */
     @Override
     public void printMap() {
         for (Map.Entry<String, Observer> key : userObserver.entrySet()
@@ -113,7 +164,40 @@ public class ServerServiceImpl implements ServerService {
         }
     }
 
+    /**
+     *
+     * Проверка на повторный коннект уже подключенного к чату пользователя.
+     * @param login
+     * @param password
+     * @return
+     */
+    @Override
+    public boolean isNotConnect(String login, String password) {
+        for (Map.Entry<String, Observer> key : userObserver.entrySet()
+        )
+            if (key.getKey().equals( login ) &&
+                    userDao.findByNameAndPassword( login, password ).getName().equals( login )) {
+                return false;
+            }
+        return true;
+    }
 
+    /**
+     * Печать Лист коллекции
+     */
+    @Override
+    public void printList() {
+        for (Observer key : observers
+        ) {
+            System.out.println( key );
+        }
+    }
+
+    /**
+     * Вывод последних 10 сообщений из БД
+     *
+     * @param observer
+     */
     @Override
     public void notifyArchiveMessage(Observer observer) {
         for (Observer key : observers) {

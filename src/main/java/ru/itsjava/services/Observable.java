@@ -6,6 +6,7 @@ public interface Observable {
     void addObserver(Observer observer);
 
     void deleteObserver(Observer observer);
+
     void notifyArchiveMessage(Observer observer);
 
     void notifyObserver(String message);
@@ -14,8 +15,15 @@ public interface Observable {
 
     void notifyObserverOnlyMe(String message, Observer observer);
 
-    void putObserver(User user, Observer observer);
+    void putObserver(String user, Observer observer);
+
+    void clearObserver(String user, Observer observer);
 
     void notifyPrivate(String user, String message);
+
     void printMap();
+
+    void printList();
+
+    boolean isNotConnect(String login, String password);
 }

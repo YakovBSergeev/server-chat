@@ -9,9 +9,7 @@ import ru.itsjava.dao.MessageDao;
 import ru.itsjava.dao.UserDao;
 import ru.itsjava.domain.User;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.Socket;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -29,11 +27,12 @@ public class ClientRunnable implements Runnable, Observer {
 
     /**
      * Этот метод работает в потоке.
-     * После прохождения авторизации/регистрации пользователя добавляем в коллекцию List<Observer>.
+     * После прохождения авторизации/регистрации пользователя добавляем в коллекцию List<Observer> и Map<String, Observer>.
      * Выводим в консоль сообщение  "Client connected", отправляем это сообщение пользователю и
      * выводим пользователю последние десять сообщении чата из БД.
-     * Обрабатываем последующие сообщения от пользователя: выводим сообщение в консоль, сохраняем в файл (МЕТОД НЕ РАБОТАЕТ),
-     * рассылаем собщение всем подключеннвм пользователям кроме автора, сохраняем сообщение в БД.
+     * Обрабатываем последующие сообщения от пользователя: выводим сообщение в консоль, сохраняем в файл,
+     * рассылаем собщение всем подключеннвм пользователям кроме автора, сохраняем сообщение в БД, рассылаем личные сообщения,
+     * при выходе из чата рассылаем всем пользователям сообщение "вышел из чата".
      */
     @SneakyThrows
     @Override
@@ -43,33 +42,43 @@ public class ClientRunnable implements Runnable, Observer {
         String messageFromClient;
         if (authorizationRegistration( bufferedReader )) {
             serverService.addObserver( this );
-            serverService.putObserver( user, this );
+            serverService.putObserver( user.getName(), this );
             log.info( serverService );
             System.out.println( "Client connected" );
             serverService.notifyObserverOnlyMe( "Client connected.", this );
             serverService.notifyArchiveMessage( this );
-            serverService.printMap();
+            serverService.notifyObserverOnlyMe( "Для личной переписки введите имя::сообщение.", this );
+
             while ((messageFromClient = bufferedReader.readLine()) != null) {
                 System.out.println( user.getName() + ":" + messageFromClient );
-                if (userDao.nameIs( messageFromClient.split( ":" )[0] )) {
-                    serverService.notifyPrivate( messageFromClient.split( ":" )[0], messageFromClient.split( ":" )[1] );
-                    messageDao.saveMessage( user.getName(), user.getName() + ":" + messageFromClient );
+                if (messageFromClient.contains( "::" )) {
+                    if (userDao.nameIs( messageFromClient.split( "::" )[0] )) {
+                        saveMessage( messageFromClient );
+                        serverService.notifyPrivate( messageFromClient.split( "::" )[0], user.getName() + ":" +
+                                messageFromClient.split( "::" )[1] );
+                        messageDao.saveMessage( user.getName(), messageFromClient );
+                    }
                 } else {
-                    saveMessage( messageFromClient );
-                    serverService.notifyObserverExceptMe( user.getName() + ":" + messageFromClient, this );
-                    messageDao.saveMessage( user.getName(), messageFromClient );
+                    if (!messageFromClient.equals( "Exit" )) {
+                        saveMessage( messageFromClient );
+                        serverService.notifyObserverExceptMe( user.getName() + ":" + messageFromClient, this );
+                        messageDao.saveMessage( user.getName(), messageFromClient );
+                    } else {
+                        serverService.notifyObserverExceptMe( user.getName() + ":" + " вышел из чата.", this );
+                        serverService.deleteObserver( this );
+                        serverService.clearObserver( user.getName(), this );
+                    }
                 }
             }
         }
     }
 
-
     /**
-     * Медот проверяет авторизацию пользователя или регистрирует нового пользователя в БД.
+     * Метод проверяет авторизацию пользователя или регистрирует нового пользователя в БД.
      * Авторизируем пользователя (true) или ловим ошибку UserNotFoundException и отправляем пользователю сообщение
      * "Такой пользователь не зарегистрирован. Авторизуйтесь повторно."
      * Регистриуем пользователя (true) или ловим ошибку UserRegistrationException и отправляем пользователю сообщение
-     * "Такой пользователь уже зарегистрирован. Измените данные регистрации."
+     * "Такой пользователь уже зарегистрирован. Измените данные регистрации." Проверка на повторное подключение.
      *
      * @param bufferedReader входящий поток с данными о поьлзователе.
      * @return true/false
@@ -78,12 +87,15 @@ public class ClientRunnable implements Runnable, Observer {
     private boolean authorizationRegistration(BufferedReader bufferedReader) {
         String authorizationMessage;
         while ((authorizationMessage = bufferedReader.readLine()) != null) {
+            String login = authorizationMessage.substring( 8 ).split( ":" )[0];
+            String password = authorizationMessage.substring( 8 ).split( ":" )[1];
             try {
-                if (authorizationMessage.startsWith( "1!autho!" )) {
-                    String login = authorizationMessage.substring( 8 ).split( ":" )[0];
-                    String password = authorizationMessage.substring( 8 ).split( ":" )[1];
+                if (authorizationMessage.startsWith( "1!autho!" ) && serverService.isNotConnect( login, password )) {
                     user = userDao.findByNameAndPassword( login, password );
                     return true;
+                } else if (authorizationMessage.startsWith( "1!autho!" ) && !serverService.isNotConnect( login, password )) {
+                    sendToClient( "Такой пользователь уже подключен." );
+//                    throw new UserAlreadyRegistrationException( "UserAlreadyRegistration" );
                 }
             } catch (UserNotFoundException userNotFoundException) {
 //                userNotFoundException.printStackTrace();
@@ -91,8 +103,6 @@ public class ClientRunnable implements Runnable, Observer {
             }
             try {
                 if (authorizationMessage.startsWith( "2!autho!" )) {
-                    String login = authorizationMessage.substring( 8 ).split( ":" )[0];
-                    String password = authorizationMessage.substring( 8 ).split( ":" )[1];
                     user = userDao.addUser( login, password );
                     return true;
                 }
@@ -110,7 +120,6 @@ public class ClientRunnable implements Runnable, Observer {
      *
      * @param message
      */
-
     @SneakyThrows
     @Override
     public void notifyMe(String message) {
@@ -124,7 +133,6 @@ public class ClientRunnable implements Runnable, Observer {
      *
      * @param message
      */
-
     private void sendToClient(String message) {
         ServerServiceImpl service = new ServerServiceImpl();
         service.addObserver( this );
@@ -138,13 +146,16 @@ public class ClientRunnable implements Runnable, Observer {
      *
      * @param messageFromClient
      */
-
     @SneakyThrows
     private void saveMessage(String messageFromClient) {
-        PrintWriter printWriter = new PrintWriter( "src/main/resources/arсhiveMessage.txt" );
-        DateFormat dateFormat = new SimpleDateFormat( "dd/MM/yyyy HH:mm:ss" );
-        Date date = new Date();
-        printWriter.println( dateFormat.format( date ) + ":" + user.getName() + ":" + messageFromClient );
+        if (!messageFromClient.equals( "Exit" )) {
+            BufferedWriter bufferedWriter = new BufferedWriter( new FileWriter( "src/main/resources/arсhiveMessage.txt", true ) );
+            DateFormat dateFormat = new SimpleDateFormat( "dd/MM/yyyy HH:mm:ss" );
+            Date date = new Date();
+            bufferedWriter.write( dateFormat.format( date ) + "       " + user.getName() + ":" + messageFromClient );
+            bufferedWriter.newLine();
+            bufferedWriter.close();
+        }
     }
 
 }
